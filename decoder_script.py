@@ -45,18 +45,21 @@ def create_feature(record):
             return result
 
 def create_geojson(data):
-    features = list(filter(None, map(create_feature, data)))
-    return json.dumps({
-        "type": "FeatureCollection",
-        "features": features,
-    })
+	print "Creating geojson..."
+	features = list(filter(None, map(create_feature, data)))
+	return json.dumps({
+		"type": "FeatureCollection",
+		"features": features,
+	})
 
 def writeFile(geojson):
+	print "Writing geojson file..."
 	outputFile = open('landfill_geojson.geojson', 'wb')
 	outputFile.write(geojson)
 	outputFile.close()
 
 if __name__ == '__main__':
 	data = retrieveData()
-	geojson = create_geojson(data['task_runinfo__area'][0:10])
+	geojson = create_geojson(data['task_runinfo__area'])
 	writeFile(geojson)
+	print "Finished"
