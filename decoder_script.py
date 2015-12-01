@@ -30,7 +30,9 @@ def load_data(fileName):
     return data        
 
 def create_features(data):
+    output = []
     record = ast.literal_eval(data[0])
+
     for i in record:
         geometry = ast.literal_eval(i['area_geometry'])
         for point in geometry['coordinates']:
@@ -46,43 +48,55 @@ def create_features(data):
                     "task_id" : data[4],
                     "task_user_id" : data[5],
                     "task_runinfo__skip" : data[6],
+                    "task_runinfo__certain" : data[7],
+                    "task_run__user_ip" : data[8],
+                    "task_run__id" : data[9],
+                    "task_run__created" : data[10],
+                    "task_run__finish_time" : data[11],
                 }
             }
-            return result                                         
+            output.append(result)
+            
+    return output                                                         
 
 def create_geojson(data):
-    '''collect features to make geojson'''
-    # this is a hack to map data columns to the 
-    # create_feature function.
-
-    # remove any items that have no polygons
-    d = data[data['task_runinfo__area'] != '0']
-
     #a stupid hack - zip all of these lists and pass them
     # into the create_feature function as variable temp
+    
+    data = data[data['task_runinfo__area'] != '0']
+    
     temp = zip(
-                list(d['task_runinfo__area']),
-                list(d['task_runinfo__Facility_Name']),
-                list(d['task_runinfo__Facility_State']),
-                list(d['task_runinfo__Facility_Street']),
-                list(d['task_run__task_id']),
-                list(d['task_run__user_id']),
-                list(d['task_runinfo__skip']),    
+                list(data['task_runinfo__area']),
+                list(data['task_runinfo__Facility_Name']),
+                list(data['task_runinfo__Facility_State']),
+                list(data['task_runinfo__Facility_Street']),
+                list(data['task_run__task_id']),
+                list(data['task_run__user_id']),
+                list(data['task_runinfo__skip']),
+                list(data['task_runinfo__certain']),
+                list(data['task_run__user_ip']),
+                list(data['task_run__id']),
+                list(data['task_run__created']),
+                list(data['task_run__finish_time']),
               )
 
-    features = list(map(create_features, temp))
+    features = map(create_features, temp)
 
-    # remove any features that do not have an area
+    # flatten the list
+    features = [item for sublist in features for item in sublist]
+
+    # remove entries without a geometry - no geometry causes import to fail
     for index,feature in enumerate(features):
+        if len(feature['geometry']['coordinates'][0]) < 3:
+            del features[index]
         if feature['properties']['area'] == 0:
             del features[index]
-            
-    # build geojson
+
     geojson = json.dumps({
         "type": "FeatureCollection",
         "features": features,
     })
-
+    
     return geojson
 
 def writeFile(geojson):
